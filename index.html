@@ -1,0 +1,126 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Photo Album Creator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── HOME SCREEN ── -->
+  <div id="home-screen" class="screen active">
+    <header class="home-header">
+      <div class="home-title-group">
+        <h1>&#128247; My Albums</h1>
+        <p class="subtitle">Your personal photo library</p>
+      </div>
+      <button id="new-album-btn" class="primary-btn">+ New Album</button>
+    </header>
+    <div id="albums-grid"></div>
+    <div id="home-empty">
+      <div class="empty-icon">&#128444;&#65039;</div>
+      <p>No albums yet.</p>
+      <p class="empty-sub">Click <strong>+ New Album</strong> to get started.</p>
+    </div>
+  </div>
+
+  <!-- ── UPLOAD SCREEN (create new album) ── -->
+  <div id="upload-screen" class="screen">
+    <div class="upload-top">
+      <button id="upload-back-btn" class="ghost-btn">&#8592; Back</button>
+    </div>
+    <header>
+      <h1>&#128247; New Album</h1>
+      <p class="subtitle">Name your album, add photos and tags</p>
+    </header>
+
+    <div id="album-title-wrap">
+      <input
+        type="text"
+        id="album-title"
+        placeholder="Album name (e.g. Summer 2025)"
+        maxlength="60"
+        required
+      />
+      <p id="album-title-err" class="field-err" hidden>Please enter an album name.</p>
+    </div>
+
+    <div id="drop-zone" role="button" tabindex="0" aria-label="Upload photos">
+      <div class="drop-icon">&#128444;&#65039;</div>
+      <p class="drop-main">Drag &amp; drop photos here</p>
+      <p class="drop-sub">or click to browse</p>
+      <input type="file" id="file-input" accept="image/*" multiple hidden />
+    </div>
+
+    <div id="preview-area" hidden>
+      <div id="preview-header">
+        <span id="photo-count">0 photos selected</span>
+        <button id="clear-btn" class="ghost-btn">&#10005; Clear all</button>
+      </div>
+      <div id="preview-grid"></div>
+    </div>
+
+    <div id="action-row">
+      <button id="create-album-btn" class="primary-btn" disabled>
+        Create Album
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ALBUM VIEW SCREEN ── -->
+  <div id="album-screen" class="screen">
+    <header class="album-header">
+      <button id="back-btn" class="ghost-btn">&#8592; Albums</button>
+      <h2 id="album-display-title">My Album</h2>
+      <button id="slideshow-btn" class="ghost-btn">&#9658; Slideshow</button>
+    </header>
+    <div id="search-bar-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="search-input" placeholder="Search by tag or filename&#8230;" autocomplete="off" />
+      <button id="search-clear-btn" aria-label="Clear search" hidden>&#10005;</button>
+    </div>
+    <div id="no-results" hidden>No photos match &#8220;<span id="no-results-query"></span>&#8221;</div>
+    <div id="album-grid"></div>
+  </div>
+
+  <!-- ── LIGHTBOX ── -->
+  <div id="lightbox" role="dialog" aria-modal="true" hidden>
+    <button id="lb-close" aria-label="Close">&#10005;</button>
+    <button id="lb-prev" aria-label="Previous">&#8249;</button>
+    <img id="lb-img" src="" alt="Full size photo" />
+    <button id="lb-next" aria-label="Next">&#8250;</button>
+    <div id="lb-bottom">
+      <div id="lb-caption"></div>
+      <div id="lb-tags-section">
+        <div id="lb-tags-list"></div>
+        <input type="text" id="lb-tag-input" placeholder="+ add tag, press Enter" maxlength="30" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDESHOW OVERLAY ── -->
+  <div id="slideshow-overlay" hidden>
+    <button id="ss-close" aria-label="Close slideshow">&#10005;</button>
+    <img id="ss-img" src="" alt="Slideshow photo" />
+    <div id="ss-bar">
+      <button id="ss-prev">&#8249;</button>
+      <span id="ss-counter"></span>
+      <button id="ss-next">&#8250;</button>
+    </div>
+  </div>
+
+  <!-- ── DELETE CONFIRM DIALOG ── -->
+  <div id="confirm-overlay" hidden>
+    <div id="confirm-box">
+      <p id="confirm-msg">Delete this album?</p>
+      <div id="confirm-actions">
+        <button id="confirm-cancel" class="ghost-btn">Cancel</button>
+        <button id="confirm-ok" class="danger-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
