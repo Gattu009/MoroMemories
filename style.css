@@ -447,6 +447,62 @@ header h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700; letter-spac
 #lb-tag-input::placeholder { color: rgba(255,255,255,.4); }
 #lb-tag-input:focus { border-color: var(--accent); border-style: solid; }
 
+/* ── Auth Screen ── */
+#auth-screen { justify-content: center; }
+#auth-box {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px 36px;
+  width: 100%; max-width: 420px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 16px;
+  box-shadow: var(--shadow);
+  animation: fadeIn .35s ease;
+}
+#auth-box h1 { font-size: 1.8rem; }
+#auth-box .subtitle { text-align: center; }
+#auth-email, #auth-password {
+  width: 100%;
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color .2s;
+}
+#auth-email:focus, #auth-password:focus { border-color: var(--accent); }
+#auth-email::placeholder, #auth-password::placeholder { color: var(--text-dim); }
+#auth-phone-step, #auth-otp-step { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+#auth-phone, #auth-otp {
+  width: 100%;
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color .2s;
+  text-align: center;
+}
+#auth-phone:focus, #auth-otp:focus { border-color: var(--accent); }
+#auth-phone::placeholder, #auth-otp::placeholder { color: var(--text-dim); }
+#auth-otp { font-size: 1.4rem; letter-spacing: .3em; }
+#auth-box .primary-btn { width: 100%; }
+#auth-error { width: 100%; text-align: center; }
+.auth-toggle-text { color: var(--text-dim); font-size: .88rem; }
+.link-btn {
+  background: transparent; border: none;
+  color: var(--accent); cursor: pointer;
+  font-size: inherit; font-weight: 600;
+  text-decoration: underline; padding: 0;
+}
+.link-btn:hover { color: var(--accent-hover); }
+.home-header-right { display: flex; align-items: center; gap: 10px; }
+
 /* ── Animations ── */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes ssIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }

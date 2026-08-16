@@ -177,10 +177,10 @@
 
   confirmOk.addEventListener('click', () => {
     if (pendingDeleteIdx >= 0) {
-      // Revoke object URLs to free memory
-      albums[pendingDeleteIdx].items.forEach(item => URL.revokeObjectURL(item.url));
+      const album = albums[pendingDeleteIdx];
       albums.splice(pendingDeleteIdx, 1);
       pendingDeleteIdx = -1;
+      deleteAlbumFromDB(album).catch(e => console.warn('Delete error:', e));
     }
     confirmOverlay.hidden = true;
     renderHome();
@@ -232,10 +232,10 @@
     const imageFiles = [...newFiles].filter(f => f.type.startsWith('image/'));
     if (!imageFiles.length) return;
     imageFiles.forEach(file => {
-      const isDupe = files.some(f => f.file.name === file.name && f.file.size === file.size);
+      const isDupe = files.some(f => f.name === file.name && f.size === file.size);
       if (isDupe) return;
       const url = URL.createObjectURL(file);
-      files.push({ file, url, name: file.name, tags: [] });
+      files.push({ file, url, name: file.name, size: file.size, tags: [] });
       renderThumb(files.length - 1);
     });
     updatePreviewState();
@@ -347,7 +347,7 @@
   /* ══════════════════════════════
      CREATE ALBUM
   ══════════════════════════════ */
-  createAlbumBtn.addEventListener('click', () => {
+  createAlbumBtn.addEventListener('click', async () => {
     const title = albumTitleInput.value.trim();
     if (!title) {
       albumTitleErr.hidden = false;
@@ -355,23 +355,48 @@
       return;
     }
     albumTitleErr.hidden = true;
-    if (!files.length) return;
+    if (!files.length || !currentUser) return;
 
-    const newAlbum = {
-      id: Date.now(),
-      title,
-      items: files.map(f => ({ ...f, tags: [...f.tags] }))
-    };
-    albums.push(newAlbum);
+    createAlbumBtn.disabled = true;
+    createAlbumBtn.textContent = 'Uploading…';
 
-    // Don't revoke URLs — album still uses them
-    files = [];
-    previewGrid.innerHTML = '';
-    albumTitleInput.value = '';
-    updatePreviewState();
+    try {
+      const albumId = Date.now();
+      const uploadedItems = await Promise.all(
+        files.map(async f => {
+          const formData = new FormData();
+          formData.append('file', f.file);
+          formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+          formData.append('folder', `photo_album/${currentUser.uid}/${albumId}`);
+          const res = await fetch(
+            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+            { method: 'POST', body: formData }
+          );
+          if (!res.ok) throw new Error(`Cloudinary upload failed: ${res.statusText}`);
+          const data = await res.json();
+          URL.revokeObjectURL(f.url);
+          return { url: data.secure_url, name: f.name, tags: [...f.tags] };
+        })
+      );
 
-    renderHome();
-    showScreen(homeScreen);
+      const newAlbum = { id: albumId, title, items: uploadedItems };
+      albums.push(newAlbum);
+      await saveNewAlbum(newAlbum);
+
+      files = [];
+      previewGrid.innerHTML = '';
+      albumTitleInput.value = '';
+      updatePreviewState();
+
+      renderHome();
+      showScreen(homeScreen);
+    } catch (e) {
+      console.error('Upload failed:', e);
+      alert('Upload failed: ' + e.message);
+    } finally {
+      createAlbumBtn.disabled = false;
+      createAlbumBtn.textContent = 'Create Album';
+    }
   });
 
   /* ══════════════════════════════
@@ -487,6 +512,7 @@
         renderLbTags();
         refreshAlbumItemTags(lbIndex);
         applySearch(searchInput.value);
+        updateAlbumInDB(activeAlbumIdx).catch(e => console.warn(e));
       });
       lbTagsList.appendChild(chip);
     });
@@ -502,11 +528,12 @@
         item.tags.push(val);
         renderLbTags();
         refreshAlbumItemTags(lbIndex);
+        updateAlbumInDB(activeAlbumIdx).catch(e => console.warn(e));
       }
       lbTagInput.value = '';
     }
     if (e.key === 'Backspace' && lbTagInput.value === '' && (item?.tags || []).length) {
-      item.tags.pop(); renderLbTags(); refreshAlbumItemTags(lbIndex);
+      item.tags.pop(); renderLbTags(); refreshAlbumItemTags(lbIndex); updateAlbumInDB(activeAlbumIdx).catch(e => console.warn(e));
     }
   });
 
@@ -592,7 +619,183 @@
     return chip;
   }
 
-  /* ── Initial render ── */
-  renderHome();
+  /* ══════════════════════════════
+     FIREBASE (Auth + Firestore) + CLOUDINARY (image storage)
+
+     FIREBASE SETUP:
+     1. console.firebase.google.com → create project → add Web app
+     2. Authentication → Sign-in method → enable Email/Password
+     3. Firestore Database → create → add rule:
+           allow read, write: if request.auth != null;
+     4. Paste the config below
+
+     CLOUDINARY SETUP (FREE — 25 GB, no card):
+     1. cloudinary.com → sign up (free)
+     2. Dashboard → note your Cloud Name
+     3. Settings → Upload → Add upload preset → set Signing Mode to "Unsigned"
+     4. Note the preset name and paste both values below
+  ══════════════════════════════ */
+  const firebaseConfig = {
+  apiKey: "AIzaSyAGxvwUVXKgF3WUfWnB7fukBR8DradmgG0",
+  authDomain: "sample-7f9a3.firebaseapp.com",
+  projectId: "sample-7f9a3",
+  storageBucket: "sample-7f9a3.firebasestorage.app",
+  messagingSenderId: "462507717103",
+  appId: "1:462507717103:web:5cf4d57458ecca0a86061a",
+  measurementId: "G-J2Z1JX30N1"
+};
+
+  const CLOUDINARY_CLOUD_NAME  = 'q5p7afdx';
+  const CLOUDINARY_UPLOAD_PRESET = 'sample';
+
+  firebase.initializeApp(firebaseConfig);
+  const auth   = firebase.auth();
+  const fstore = firebase.firestore();
+
+  let currentUser = null;
+
+  /* ── Firestore / Storage helpers ── */
+  function albumsRef() {
+    return fstore.collection('users').doc(currentUser.uid).collection('albums');
+  }
+
+  async function loadAlbums() {
+    const snap = await albumsRef().orderBy('createdAt').get();
+    albums = snap.docs.map(doc => {
+      const d = doc.data();
+      return { id: d.id, title: d.title, items: d.items || [] };
+    });
+  }
+
+  async function saveNewAlbum(album) {
+    await albumsRef().doc(String(album.id)).set({
+      id:        album.id,
+      title:     album.title,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      items:     album.items.map(({ url, name, tags }) => ({ url, name, tags }))
+    });
+  }
+
+  async function updateAlbumInDB(albumIdx) {
+    const album = albums[albumIdx];
+    if (!album || !currentUser) return;
+    await albumsRef().doc(String(album.id)).update({
+      items: album.items.map(({ url, name, tags }) => ({ url, name, tags }))
+    });
+  }
+
+  async function deleteAlbumFromDB(album) {
+    // Cloudinary unsigned presets don’t support browser-side delete — only the Firestore record is removed.
+    await albumsRef().doc(String(album.id)).delete();
+  }
+
+  /* ── Auth screen element refs ── */
+  const authScreen         = document.getElementById('auth-screen');
+  const authPhoneInput     = document.getElementById('auth-phone');
+  const authPhoneStep      = document.getElementById('auth-phone-step');
+  const authOtpStep        = document.getElementById('auth-otp-step');
+  const authOtpInput       = document.getElementById('auth-otp');
+  const authSendBtn        = document.getElementById('auth-send-btn');
+  const authVerifyBtn      = document.getElementById('auth-verify-btn');
+  const authResendBtn      = document.getElementById('auth-resend-btn');
+  const authPhoneDisplay   = document.getElementById('auth-phone-display');
+  const authError          = document.getElementById('auth-error');
+  const signOutBtn         = document.getElementById('sign-out-btn');
+
+  let confirmationResult = null;
+  let appVerifier        = null;
+
+  function initRecaptcha() {
+    if (appVerifier) return;
+    appVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      size: 'invisible',
+      callback: () => {}
+    });
+  }
+
+  function showAuthError(msg) {
+    authError.textContent = msg;
+    authError.hidden = false;
+  }
+
+  authSendBtn.addEventListener('click', async () => {
+    const phone = authPhoneInput.value.trim();
+    if (!phone) { showAuthError('Please enter a phone number.'); return; }
+    authError.hidden = true;
+    authSendBtn.disabled = true;
+    authSendBtn.textContent = 'Sending…';
+    confirmationResult = null;
+    try {
+      initRecaptcha();
+      confirmationResult = await auth.signInWithPhoneNumber(phone, appVerifier);
+      authPhoneDisplay.textContent = phone;
+      authPhoneStep.hidden = true;
+      authOtpStep.hidden = false;
+      authOtpInput.focus();
+    } catch (err) {
+      showAuthError(err.message);
+      try { appVerifier?.clear(); } catch (_) {}
+      appVerifier = null;
+    } finally {
+      authSendBtn.disabled = false;
+      authSendBtn.textContent = 'Send Code';
+    }
+  });
+
+  authPhoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') authSendBtn.click(); });
+
+  authVerifyBtn.addEventListener('click', async () => {
+    const code = authOtpInput.value.trim();
+    if (!code) { showAuthError('Please enter the verification code.'); return; }
+    if (!confirmationResult) {
+      showAuthError('Session expired. Please go back and send the code again.');
+      return;
+    }
+    authError.hidden = true;
+    authVerifyBtn.disabled = true;
+    authVerifyBtn.textContent = 'Verifying…';
+    try {
+      await confirmationResult.confirm(code);
+      // onAuthStateChanged will handle the rest
+    } catch (err) {
+      showAuthError(err.message);
+      authVerifyBtn.disabled = false;
+      authVerifyBtn.textContent = 'Verify & Sign In';
+    }
+  });
+
+  authOtpInput.addEventListener('keydown', e => { if (e.key === 'Enter') authVerifyBtn.click(); });
+
+  authResendBtn.addEventListener('click', () => {
+    authPhoneStep.hidden = false;
+    authOtpStep.hidden = true;
+    authOtpInput.value = '';
+    authError.hidden = true;
+    confirmationResult = null;
+    appVerifier = null;
+    authPhoneInput.focus();
+  });
+
+  signOutBtn.addEventListener('click', () => auth.signOut());
+
+  /* ── Auth state observer — drives all screen transitions ── */
+  auth.onAuthStateChanged(async user => {
+    currentUser = user;
+    if (user) {
+      try { await loadAlbums(); } catch (e) { console.warn('Failed to load albums:', e); albums = []; }
+      authScreen.classList.remove('active');
+      uploadScreen.classList.remove('active');
+      albumScreen.classList.remove('active');
+      renderHome();
+      homeScreen.classList.add('active');
+    } else {
+      albums = [];
+      activeAlbumIdx = -1;
+      homeScreen.classList.remove('active');
+      uploadScreen.classList.remove('active');
+      albumScreen.classList.remove('active');
+      authScreen.classList.add('active');
+    }
+  });
 
 })();

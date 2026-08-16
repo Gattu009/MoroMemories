@@ -8,14 +8,41 @@
 </head>
 <body>
 
+  <!-- ── AUTH SCREEN ── -->
+  <div id="auth-screen" class="screen active">
+    <div id="auth-box">
+      <h1>&#128247; My Albums</h1>
+      <p class="subtitle" id="auth-subtitle">Enter your phone number to sign in</p>
+      <p id="auth-error" class="field-err" hidden></p>
+
+      <!-- Step 1: phone number -->
+      <div id="auth-phone-step">
+        <input type="tel" id="auth-phone" placeholder="+1 234 567 8900" autocomplete="tel" />
+        <div id="recaptcha-container"></div>
+        <button id="auth-send-btn" class="primary-btn">Send Code</button>
+      </div>
+
+      <!-- Step 2: OTP code -->
+      <div id="auth-otp-step" hidden>
+        <p class="auth-toggle-text">Code sent to <span id="auth-phone-display"></span></p>
+        <input type="text" id="auth-otp" placeholder="6-digit code" maxlength="6" autocomplete="one-time-code" inputmode="numeric" />
+        <button id="auth-verify-btn" class="primary-btn">Verify &amp; Sign In</button>
+        <button id="auth-resend-btn" class="link-btn" style="margin-top:8px">&#8592; Change number</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── HOME SCREEN ── -->
-  <div id="home-screen" class="screen active">
+  <div id="home-screen" class="screen">
     <header class="home-header">
       <div class="home-title-group">
         <h1>&#128247; My Albums</h1>
         <p class="subtitle">Your personal photo library</p>
       </div>
-      <button id="new-album-btn" class="primary-btn">+ New Album</button>
+      <div class="home-header-right">
+        <button id="new-album-btn" class="primary-btn">+ New Album</button>
+        <button id="sign-out-btn" class="ghost-btn">Sign Out</button>
+      </div>
     </header>
     <div id="albums-grid"></div>
     <div id="home-empty">
@@ -121,6 +148,9 @@
     </div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
