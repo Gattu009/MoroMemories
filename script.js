@@ -690,90 +690,48 @@
   }
 
   /* ── Auth screen element refs ── */
-  const authScreen         = document.getElementById('auth-screen');
-  const authPhoneInput     = document.getElementById('auth-phone');
-  const authPhoneStep      = document.getElementById('auth-phone-step');
-  const authOtpStep        = document.getElementById('auth-otp-step');
-  const authOtpInput       = document.getElementById('auth-otp');
-  const authSendBtn        = document.getElementById('auth-send-btn');
-  const authVerifyBtn      = document.getElementById('auth-verify-btn');
-  const authResendBtn      = document.getElementById('auth-resend-btn');
-  const authPhoneDisplay   = document.getElementById('auth-phone-display');
-  const authError          = document.getElementById('auth-error');
-  const signOutBtn         = document.getElementById('sign-out-btn');
+  const authScreen        = document.getElementById('auth-screen');
+  const authEmailInput    = document.getElementById('auth-email');
+  const authPasswordInput = document.getElementById('auth-password');
+  const authSubmitBtn     = document.getElementById('auth-submit-btn');
+  const authSwitchBtn     = document.getElementById('auth-switch-btn');
+  const authError         = document.getElementById('auth-error');
+  const authSubtitle      = document.getElementById('auth-subtitle');
+  const signOutBtn        = document.getElementById('sign-out-btn');
 
-  let confirmationResult = null;
-  let appVerifier        = null;
+  let isSignUpMode = false;
 
-  function initRecaptcha() {
-    if (appVerifier) return;
-    appVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-      size: 'invisible',
-      callback: () => {}
-    });
-  }
-
-  function showAuthError(msg) {
-    authError.textContent = msg;
-    authError.hidden = false;
-  }
-
-  authSendBtn.addEventListener('click', async () => {
-    const phone = authPhoneInput.value.trim();
-    if (!phone) { showAuthError('Please enter a phone number.'); return; }
+  authSwitchBtn.addEventListener('click', () => {
+    isSignUpMode = !isSignUpMode;
+    authSubmitBtn.textContent = isSignUpMode ? 'Create Account' : 'Sign In';
+    authSubtitle.textContent  = isSignUpMode ? 'Create a new account' : 'Sign in to your account';
+    authSwitchBtn.textContent = isSignUpMode ? 'Sign In' : 'Sign Up';
     authError.hidden = true;
-    authSendBtn.disabled = true;
-    authSendBtn.textContent = 'Sending…';
-    confirmationResult = null;
-    try {
-      initRecaptcha();
-      confirmationResult = await auth.signInWithPhoneNumber(phone, appVerifier);
-      authPhoneDisplay.textContent = phone;
-      authPhoneStep.hidden = true;
-      authOtpStep.hidden = false;
-      authOtpInput.focus();
-    } catch (err) {
-      showAuthError(err.message);
-      try { appVerifier?.clear(); } catch (_) {}
-      appVerifier = null;
-    } finally {
-      authSendBtn.disabled = false;
-      authSendBtn.textContent = 'Send Code';
-    }
   });
 
-  authPhoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') authSendBtn.click(); });
+  authPasswordInput.addEventListener('keydown', e => { if (e.key === 'Enter') authSubmitBtn.click(); });
 
-  authVerifyBtn.addEventListener('click', async () => {
-    const code = authOtpInput.value.trim();
-    if (!code) { showAuthError('Please enter the verification code.'); return; }
-    if (!confirmationResult) {
-      showAuthError('Session expired. Please go back and send the code again.');
+  authSubmitBtn.addEventListener('click', async () => {
+    const email    = authEmailInput.value.trim();
+    const password = authPasswordInput.value;
+    if (!email || !password) {
+      authError.textContent = 'Please enter your email and password.';
+      authError.hidden = false;
       return;
     }
+    authSubmitBtn.disabled = true;
     authError.hidden = true;
-    authVerifyBtn.disabled = true;
-    authVerifyBtn.textContent = 'Verifying…';
     try {
-      await confirmationResult.confirm(code);
-      // onAuthStateChanged will handle the rest
+      if (isSignUpMode) {
+        await auth.createUserWithEmailAndPassword(email, password);
+      } else {
+        await auth.signInWithEmailAndPassword(email, password);
+      }
     } catch (err) {
-      showAuthError(err.message);
-      authVerifyBtn.disabled = false;
-      authVerifyBtn.textContent = 'Verify & Sign In';
+      authError.textContent = err.message;
+      authError.hidden = false;
+      authSubmitBtn.disabled = false;
     }
-  });
-
-  authOtpInput.addEventListener('keydown', e => { if (e.key === 'Enter') authVerifyBtn.click(); });
-
-  authResendBtn.addEventListener('click', () => {
-    authPhoneStep.hidden = false;
-    authOtpStep.hidden = true;
-    authOtpInput.value = '';
-    authError.hidden = true;
-    confirmationResult = null;
-    appVerifier = null;
-    authPhoneInput.focus();
   });
 
   signOutBtn.addEventListener('click', () => auth.signOut());
