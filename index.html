@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -12,23 +12,12 @@
   <div id="auth-screen" class="screen active">
     <div id="auth-box">
       <h1>&#128247; My Albums</h1>
-      <p class="subtitle" id="auth-subtitle">Enter your phone number to sign in</p>
+      <p class="subtitle" id="auth-subtitle">Sign in to your account</p>
       <p id="auth-error" class="field-err" hidden></p>
-
-      <!-- Step 1: phone number -->
-      <div id="auth-phone-step">
-        <input type="tel" id="auth-phone" placeholder="+1 234 567 8900" autocomplete="tel" />
-        <div id="recaptcha-container"></div>
-        <button id="auth-send-btn" class="primary-btn">Send Code</button>
-      </div>
-
-      <!-- Step 2: OTP code -->
-      <div id="auth-otp-step" hidden>
-        <p class="auth-toggle-text">Code sent to <span id="auth-phone-display"></span></p>
-        <input type="text" id="auth-otp" placeholder="6-digit code" maxlength="6" autocomplete="one-time-code" inputmode="numeric" />
-        <button id="auth-verify-btn" class="primary-btn">Verify &amp; Sign In</button>
-        <button id="auth-resend-btn" class="link-btn" style="margin-top:8px">&#8592; Change number</button>
-      </div>
+      <input type="email" id="auth-email" placeholder="Email address" autocomplete="email" />
+      <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" />
+      <button id="auth-submit-btn" class="primary-btn">Sign In</button>
+      <p class="auth-toggle-text">Don&#39;t have an account? <button id="auth-switch-btn" class="link-btn">Sign Up</button></p>
     </div>
   </div>
 
@@ -154,3 +143,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
